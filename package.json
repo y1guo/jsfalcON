@@ -1,0 +1,29 @@
+{
+    "name": "jsfalcon",
+    "version": "1.0.0",
+    "description": "Javascript implementation of Dehnen's O(N) N-body algorithm (https://arxiv.org/abs/astro-ph/0202512), which is also known as gyrfalcON as part of NEMO (https://github.com/teuben/nemo).",
+    "main": "index.js",
+    "scripts": {
+        "start": "webpack serve --open",
+        "build": "webpack"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/y1guo/jsfalcON.git"
+    },
+    "author": "Yi Guo",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/y1guo/jsfalcON/issues"
+    },
+    "homepage": "https://github.com/y1guo/jsfalcON#readme",
+    "dependencies": {
+        "three": "^0.138.3"
+    },
+    "devDependencies": {
+        "html-webpack-plugin": "^5.5.0",
+        "webpack": "^5.70.0",
+        "webpack-cli": "^4.9.2",
+        "webpack-dev-server": "^4.7.4"
+    }
+}
