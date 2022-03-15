@@ -1,85 +1,141 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import NBody from "./jsfalcON";
+import Stats from "three/examples/jsm/libs/stats.module.js";
+import { Body, NBody } from "./jsfalcON";
 
-// create the scene
-const scene = new THREE.Scene();
+let container, stats;
 
-const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-);
-camera.position.set(0, 0, 50);
+let camera, scene, renderer, controls;
 
-const renderer = new THREE.WebGLRenderer({
-    canvas: document.getElementById("canvas"),
-});
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.render(scene, camera);
+let points, nbody;
 
-const controls = new OrbitControls(camera, renderer.domElement);
+let lastTime = 0;
 
-const ambientLight = new THREE.AmbientLight(0xffffff);
-scene.add(ambientLight);
+init();
+requestAnimationFrame(animate);
 
-// generate points
-const mass = [];
-const position = [];
-const velocity = [];
-const npoint = 1000;
+function init() {
+    container = document.getElementById("container");
 
-for (let i = 0; i < npoint; i++) {
-    const m = 1;
-    const x = THREE.MathUtils.randFloatSpread(100);
-    const y = THREE.MathUtils.randFloatSpread(100);
-    const z = THREE.MathUtils.randFloatSpread(100);
-    const vx = 0;
-    const vy = 0;
-    const vz = 0;
+    //
 
-    mass.push(m);
-    position.push(x, y, z);
-    velocity.push(vx, vy, vz);
+    camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
+    camera.position.z = 100;
+
+    scene = new THREE.Scene();
+
+    //
+
+    const npoint = 100000;
+    const radius = 50;
+
+    const bodyArray = [];
+
+    for (let i = 0; i < npoint; i++) {
+        const mass = 1;
+
+        const x = (2 * Math.random() - 1) * radius;
+        const y = (2 * Math.random() - 1) * radius;
+        const z = (2 * Math.random() - 1) * radius;
+
+        bodyArray.push(new Body(mass, [x, y, z], [0, 0, 0]));
+    }
+
+    nbody = new NBody(bodyArray);
+    nbody.softening = 1;
+
+    //
+
+    const geometry = new THREE.BufferGeometry();
+
+    geometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(Array(3 * npoint).fill(0), 3)
+    );
+    geometry.setAttribute(
+        "color",
+        new THREE.Float32BufferAttribute(Array(3 * npoint).fill(0), 3)
+    );
+
+    //
+
+    const material = new THREE.PointsMaterial({
+        size: 0.2,
+        vertexColors: true,
+    });
+
+    points = new THREE.Points(geometry, material);
+    updateGeometry();
+    scene.add(points);
+
+    //
+
+    const ambientLight = new THREE.AmbientLight(0xffffff);
+    scene.add(ambientLight);
+
+    //
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    container.appendChild(renderer.domElement);
+
+    //
+
+    controls = new OrbitControls(camera, renderer.domElement);
+
+    //
+
+    stats = new Stats();
+    container.appendChild(stats.dom);
+
+    //
+
+    window.addEventListener("resize", onWindowResize);
 }
 
-// show points
-const geometry = new THREE.BufferGeometry();
-geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(position, 3)
-);
-geometry.setAttribute(
-    "velocity",
-    new THREE.Float32BufferAttribute(velocity, 3)
-);
-const nbody = new NBody(
-    mass,
-    geometry.attributes.position.array,
-    geometry.attributes.velocity.array
-);
-nbody.softening = 1;
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
 
-const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.2 });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
-const stars = new THREE.Points(geometry, material);
-scene.add(stars);
+//
 
-// animate
-let lastTime = 0;
 function animate(currentTime) {
+    requestAnimationFrame(animate);
+
     let deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    nbody.update(deltaTime / 1000);
-    stars.geometry.attributes.position.needsUpdate = true;
-
     controls.update();
+    render(deltaTime);
+    stats.update();
+}
+
+function render(deltaTime) {
+    nbody.update(deltaTime / 1000);
+    updateGeometry();
+    points.geometry.attributes.position.needsUpdate = true;
 
     renderer.render(scene, camera);
-
-    requestAnimationFrame(animate);
 }
-requestAnimationFrame(animate);
+
+function updateGeometry() {
+    const position = points.geometry.attributes.position.array;
+    const color = points.geometry.attributes.color.array;
+    for (let i = 0; i < nbody.num; i++) {
+        const body = nbody.bodyArray[i];
+        for (let j = 0; j < 3; j++) {
+            position[3 * i + j] = body.pos[j];
+            color[3 * i + j] = body.color[j];
+        }
+    }
+}
